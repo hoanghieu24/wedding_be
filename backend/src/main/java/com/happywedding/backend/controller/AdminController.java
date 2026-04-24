@@ -16,6 +16,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
@@ -76,5 +78,11 @@ public class AdminController {
         wish.setVisible(!Boolean.TRUE.equals(wish.getVisible()));
         wishRepository.save(wish);
         return ResponseEntity.ok(new ApiMessageResponse("Cập nhật trạng thái lời chúc thành công"));
+    }
+
+    @DeleteMapping("/gallery/{id}")
+    public ResponseEntity<ApiMessageResponse> deleteGalleryImage(@PathVariable Long id) throws IOException, IOException {
+        fileStorageService.deleteGallery(id);
+        return ResponseEntity.ok(new ApiMessageResponse("Xoá ảnh thành công"));
     }
 }

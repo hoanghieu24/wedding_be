@@ -2,6 +2,9 @@ package com.happywedding.backend.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.happywedding.backend.entity.GalleryImage;
+import com.happywedding.backend.exception.ResourceNotFoundException;
+import com.happywedding.backend.repository.GalleryImageRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -19,6 +22,8 @@ import java.util.UUID;
 @Service
 public class FileStorageService {
 
+    private final GalleryImageRepository imageRepository;
+
     @Value("${cloudinary.cloud-name:}")
     private String cloudName;
 
@@ -30,6 +35,10 @@ public class FileStorageService {
 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
+
+    public FileStorageService(GalleryImageRepository imageRepository) {
+        this.imageRepository = imageRepository;
+    }
 
     public UploadResult uploadImage(MultipartFile file, String title) throws IOException {
         if (hasCloudinaryConfig()) {
@@ -74,4 +83,31 @@ public class FileStorageService {
     }
 
     public record UploadResult(String title, String imageUrl, String publicId) {}
+    public void deleteImage(String publicId) throws IOException {
+        if (!StringUtils.hasText(publicId)) {
+            return;
+        }
+
+        if (hasCloudinaryConfig()) {
+            Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(
+                    "cloud_name", cloudName,
+                    "api_key", apiKey,
+                    "api_secret", apiSecret
+            ));
+
+            cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            return;
+        }
+
+        Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(publicId);
+        Files.deleteIfExists(filePath);
+    }
+    public void deleteGallery(Long galleryId) throws IOException {
+        GalleryImage galleryImage = imageRepository.findById(galleryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ảnh trong thư viện"));
+
+        deleteImage(galleryImage.getPublicId());
+
+        imageRepository.delete(galleryImage);
+    }
 }
